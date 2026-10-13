@@ -1,6 +1,6 @@
 -- Guardian reconstruction for Parkour Duels. Paste into a server Script.
 -- References: the supplied Guardian article and overhead/in-game screenshots.
--- Topology and landmarks follow those references; studs/elevations are inferred.
+-- Expanded 800 x 800 stud movement arena. Vertical levels remain movement-sized.
 -- Floor coordinates mean TOP surfaces. Keep your existing movement controller.
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -9,6 +9,9 @@ local RunService = game:GetService("RunService")
 
 local CONFIG = {
     Origin = Vector3.new(0, 64, 0),
+    FootprintStuds = 800, -- Playable floor width and depth; forest extends outside.
+    RouteWallHeight = 14,
+    FloorSurfaceThickness = 0.12,
     SetAtmosphere = true,
     EnableSpawns = true,
     EnableLifts = true,
@@ -24,7 +27,7 @@ local CONFIG = {
 }
 local UPPER = 16 -- Thin deck slabs leave 15 studs of clear space below.
 local SNIPER_TOP = 24
-local GENERATOR_ID = "ParkourDuelsGuardian_v2"
+local GENERATOR_ID = "ParkourDuelsGuardian_v3"
 local old = Workspace:FindFirstChild("Guardian")
 if old then
     if old:GetAttribute("GeneratorId") ~= GENERATOR_ID
@@ -59,7 +62,7 @@ local colors = {
     white = Color3.fromRGB(204, 246, 241),
 }
 local folders = {}
-for _, name in ipairs({"Floors", "Walls", "Architecture", "Details", "Forest", "Gameplay", "Callouts"}) do
+for _, name in ipairs({"Floors", "Walls", "Architecture", "Details", "Forest", "Gameplay", "Callouts", "FloorSurfaces"}) do
     local f = Instance.new("Folder")
     f.Name = name
     f.Parent = map
@@ -104,10 +107,6 @@ local function floor(name,x,top,z,sx,sz,stone)
     local p = block(name,x,top-0.5,z,sx,1,sz,stone and colors.stone or colors.metal,
         stone and Enum.Material.Slate or Enum.Material.Metal,"Floors")
     texture(p,stone and CONFIG.StoneTexture or CONFIG.MetalTexture)
-    for offset=-sx/2+8,sx/2-0.5,8 do
-        block(name.."_Seam",x+offset,top+0.015,z,0.06,0.02,sz-0.4,
-            colors.edge,Enum.Material.Metal,"Details",false)
-    end
     return p
 end
 -- Subdivide a floor around actual rectangular holes; no invisible collision cap.
@@ -170,9 +169,11 @@ local function route(name,ax,ay,az,bx,by,bz,width,rails)
     local length=delta.Magnitude
     local frame=CFrame.lookAt((a+b)/2,b)
     -- Offset perpendicular to the ramp so its top follows both given endpoints.
-    local p=part(name,Vector3.new(width,1,length+0.7),frame*CFrame.new(0,-0.5,0),
+    local p=part(name,Vector3.new(width,1,length),frame*CFrame.new(0,-0.5,0),
         colors.metal,Enum.Material.Metal,"Floors")
     texture(p,CONFIG.MetalTexture)
+    p:SetAttribute("RouteStart",a)
+    p:SetAttribute("RouteEnd",b)
     for _,side in ipairs({-1,1}) do
         part(name.."_Fascia",Vector3.new(0.65,2,length),frame*CFrame.new(side*(width/2-0.2),-1,0),
             colors.edge,Enum.Material.Metal,"Architecture",false)
@@ -180,11 +181,6 @@ local function route(name,ax,ay,az,bx,by,bz,width,rails)
             part(name.."_Parapet",Vector3.new(0.7,3.2,length),frame*CFrame.new(side*width/2,1.6,0),
                 colors.stone,Enum.Material.Slate,"Walls")
         end
-    end
-    for i=1,math.floor(length/8) do
-        part(name.."_Seam",Vector3.new(width-0.4,0.025,0.07),
-            frame*CFrame.new(0,0.015,-length/2+i*length/(math.floor(length/8)+1)),
-            colors.edge,Enum.Material.Metal,"Details",false)
     end
     return p
 end
@@ -343,7 +339,7 @@ floor("GoldLower",67,0,0,46,46)
 perforatedFloor("GoldUpper",UPPER,
     {48,64,68,76,80,90},{-23,-16,-8,-5,5,8,16,23},
     {{64,80,-5,5},{68,76,-16,-8},{68,76,8,16}})
-wall("GoldEastBack",91,0,0,2,36,48)
+wall("GoldEastBack",91.75,0,0,1.5,36,48)
 wall("GoldNorthWest",49,0,-24,8,34,2)
 wall("GoldNorthEast",82,0,-24,18,34,2)
 arch("GoldCamoDoor",64,UPPER,-24,18,0,colors.gold)
@@ -352,7 +348,7 @@ wall("GoldSouthEast",81,0,24,20,34,2)
 arch("GoldBlueDoor",58,UPPER,24,24,0,colors.gold)
 -- Tall facade and roof strips leave the shaft open; no cap across the lift.
 floor("GoldRoofWest",54,34,0,16,50)
-floor("GoldRoofEast",88,34,0,16,50)
+floor("GoldRoofEast",85.5,34,0,11,50)
 wall("GoldLiftBackColumn",86,0,0,5,36,10)
 glow("GoldColumnGlow",83.4,18,0,0.12,28,3,colors.gold,true)
 for _,z in ipairs({-12,12}) do
@@ -360,7 +356,7 @@ for _,z in ipairs({-12,12}) do
 end
 floor("GoldCamoLedge",64,UPPER,-32,28,16)
 floor("GoldBlueJumpLanding",54,UPPER,41,12,12)
-route("GoldJumpLandingLink",54,UPPER,35,54,UPPER,24,12,false)
+route("GoldJumpLandingLink",54,UPPER,35,54,UPPER,23,12,false)
 callout("Gold / Yellow Lift",72,0,0)
 callout("Camo Ledge",64,UPPER,-32)
 
@@ -409,12 +405,11 @@ callout("Bottom Blue / Shotgun",-15,0,70)
 -- POWER-CORE HALL: safer L-shaped Blue -> Gold upper path, with a lower drop.
 perforatedFloor("PowerCoreHallEast",UPPER,{20,40,42,50,56},{56,60,68,72},{{42,50,60,68}})
 floor("PowerCoreHallCorner",62,UPPER,64,12,12)
-route("PowerCoreHallNorth",62,UPPER,58,62,UPPER,24,12,false)
+route("PowerCoreHallNorth",62,UPPER,58,62,UPPER,23,12,false)
 wall("PowerCoreHallSouthWall",39,UPPER,73,38,6,2)
 wall("PowerCoreHallEastWall",69,UPPER,48,2,7,46)
 -- Narrow bridges beside the drop retain a continuous walking route.
-floor("PowerCoreDropNorthLip",46,UPPER,58,12,4)
-floor("PowerCoreDropSouthLip",46,UPPER,70,12,4)
+-- The perforated floor already supplies both lips; extra slabs caused flicker.
 for _,z in ipairs({34,45,56}) do
     local core=glow("WallPowerCore",67.8,UPPER+3,z,0.2,2.8,1.3,colors.blue,false)
     core:SetAttribute("DecorativeOnly",true) -- No weapons/explosions added to your game.
@@ -486,7 +481,7 @@ end
 local lifts={}
 local cooldown=setmetatable({}, {__mode="k"})
 local function lift(name,x,y,z,tx,ty,tz,color,flightTime,vertical)
-    floor(name.."_Base",x,y,z,10,10)
+    -- The lift is supported by its host floor; no duplicate surface underneath.
     local pad=disc(name.."_Emitter",x,y+0.035,z,3.2,0.07,color,Enum.Material.Neon,"Details",false)
     pad.Transparency=0.15
     local trigger=block(name,x,y+2.5,z,6,5,6,color,Enum.Material.ForceField,"Gameplay",false)
@@ -529,6 +524,330 @@ if CONFIG.EnableLifts then
     route("GreenCannonAccess",23,0,-54,36,0,-36,10,false)
     lift("GreenToGold",40,0,-36,64,UPPER,-32,colors.cyan,0.70,false)
 end
+-- Enlarge horizontally after construction, preserving the 8-stud level steps.
+-- Two outer ledges make the layout bounds exactly 185 x 185 before resizing.
+floor("SniperOuterWalk",-93.5,SNIPER_TOP,22,1,12)
+floor("GoldOuterWalk",90.5,UPPER,0,1,46)
+local SCALE=CONFIG.FootprintStuds/185
+local OFFSET_X,OFFSET_Z=1.5,-18.5
+map:SetAttribute("FootprintWidth",CONFIG.FootprintStuds)
+map:SetAttribute("FootprintDepth",CONFIG.FootprintStuds)
+map:SetAttribute("HorizontalScale",SCALE)
+map:SetAttribute("LayoutOffsetX",OFFSET_X)
+map:SetAttribute("LayoutOffsetZ",OFFSET_Z)
+map:SetAttribute("Origin",CONFIG.Origin)
+local function stretchVector(v)
+    return Vector3.new(v.X*SCALE,v.Y,v.Z*SCALE)
+end
+local function stretchPoint(v)
+    local q=v-CONFIG.Origin
+    return CONFIG.Origin+Vector3.new((q.X+OFFSET_X)*SCALE,q.Y,(q.Z+OFFSET_Z)*SCALE)
+end
+local function layoutPoint(x,y,z)
+    return stretchPoint(world(x,y,z))
+end
+local routes={}
+for _,object in ipairs(map:GetDescendants()) do
+    for _,key in ipairs({"Position","LaunchPoint","Destination","RouteStart","RouteEnd"}) do
+        local value=object:GetAttribute(key)
+        if value then object:SetAttribute(key,stretchPoint(value)) end
+    end
+    if object:IsA("BasePart") then
+        local cf,oldSize=object.CFrame,object.Size
+        local right=stretchVector(cf.RightVector)
+        local up=stretchVector(cf.UpVector)
+        local back=stretchVector(-cf.LookVector)
+        local r=right.Unit
+        local u=(up-r*up:Dot(r)).Unit
+        local b=r:Cross(u)
+        object.Size=Vector3.new(oldSize.X*right.Magnitude,
+            oldSize.Y*math.abs(up:Dot(u)),oldSize.Z*math.abs(back:Dot(b)))
+        object.CFrame=CFrame.fromMatrix(stretchPoint(cf.Position),r,u,b)
+        if object:GetAttribute("RouteStart") then
+            local a=object:GetAttribute("RouteStart")
+            local finish=object:GetAttribute("RouteEnd")
+            -- Rebuild sloped decks, rather than stretching their tilted thickness.
+            object.Size=Vector3.new(oldSize.X*SCALE,1,(finish-a).Magnitude)
+            object.CFrame=CFrame.lookAt((a+finish)/2,finish)*CFrame.new(0,-0.5,0)
+            routes[object.Name]=object
+        end
+    elseif object:IsA("PointLight") then
+        object.Range=math.min(60,object.Range*SCALE)
+    end
+end
+for _,shaft in ipairs(lifts) do
+    shaft.target=shaft.part:GetAttribute("Destination")
+end
+
+-- Compact jump runways keep the two shortcuts at 18 real studs after resizing.
+local function physicalRoute(name,a,b,width)
+    local p=part(name,Vector3.new(width,1,(b-a).Magnitude),
+        CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.5,0),colors.metal,Enum.Material.Metal,"Floors")
+    p:SetAttribute("RouteStart",a)
+    p:SetAttribute("RouteEnd",b)
+    routes[name]=p
+    return p
+end
+-- Bridge ends enter the circular decks so their full width joins the rim.
+for _,name in ipairs({"CenterToSniperLower","CenterToSniperUpper","CenterToGoldLower",
+    "CenterToGoldUpper","CenterToBlueLower","CenterToBlueUpper"}) do
+    local p=routes[name]
+    local a,b=p:GetAttribute("RouteStart"),p:GetAttribute("RouteEnd")
+    a=a+(layoutPoint(0,a.Y-CONFIG.Origin.Y,0)-a).Unit*6
+    p:SetAttribute("RouteStart",a)
+    p.Size=Vector3.new(p.Size.X,1,(b-a).Magnitude)
+    p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.5,0)
+end
+do
+    local p=routes.GreenUnderpassB
+    local a,b=p:GetAttribute("RouteStart"),p:GetAttribute("RouteEnd")
+    b=b+(layoutPoint(0,0,0)-b).Unit*6
+    p:SetAttribute("RouteEnd",b)
+    p.Size=Vector3.new(p.Size.X,1,(b-a).Magnitude)
+    p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.5,0)
+end
+local greenLanding=layoutPoint(0,UPPER,-18)
+local greenTakeoff=greenLanding-Vector3.new(0,0,18)
+physicalRoute("GreenJumpRunway",layoutPoint(0,UPPER,-36)-Vector3.new(0,0,3),greenTakeoff,18)
+local goldLanding=layoutPoint(48,UPPER,41)
+local blueTakeoff=goldLanding-Vector3.new(18,0,0)
+physicalRoute("BlueGoldJumpRunway",layoutPoint(30,UPPER,41),blueTakeoff,18)
+physicalRoute("StumpMantleApproach",layoutPoint(0,8,-57),layoutPoint(0,8,-52),18)
+for _,jump in ipairs({{"GreenStumpToCenter",greenTakeoff,greenLanding},
+    {"BlueToGold",blueTakeoff,goldLanding}}) do
+    local marker=Instance.new("Folder")
+    marker.Name=jump[1]
+    marker:SetAttribute("JumpTakeoff",jump[2])
+    marker:SetAttribute("JumpLanding",jump[3])
+    marker:SetAttribute("GapStuds",18)
+    marker.Parent=folders.Callouts
+end
+
+-- Corridor walls stop long open sightlines. Ends stay open for pad turns.
+local function routeWalls(name,height,oneSide)
+    local owner=routes[name]
+    if not owner then return end
+    local a,b=owner:GetAttribute("RouteStart"),owner:GetAttribute("RouteEnd")
+    local length=(b-a).Magnitude
+    local clearEnd=math.min(owner.Size.X/2+5,length/3)
+    local frame=CFrame.lookAt((a+b)/2,b)
+    for _,side in ipairs(oneSide and {-1} or {-1,1}) do
+        part(name.."_EnclosingWall",Vector3.new(2,height,length-2*clearEnd),
+            frame*CFrame.new(side*(owner.Size.X/2-1),height/2,0),
+            colors.stone,Enum.Material.Slate,"Walls")
+    end
+    -- Staggered cover leaves a continuous central running lane.
+    if length>75 and owner.Size.X>30 then
+        local side=1
+        for distance=35,length-25,55 do
+            part(name.."_Cover",Vector3.new(2.5,8,15),
+                frame*CFrame.new(side*owner.Size.X/4,4,-length/2+distance),
+                colors.edge,Enum.Material.Metal,"Walls")
+            side=-side
+        end
+    end
+end
+for _,name in ipairs({"CenterToSniperLower","CenterToGoldLower","CenterToBlueLower",
+    "BottomBlueToGoldA","BottomBlueToGoldB","GreenUnderpassA","GreenUnderpassB"}) do
+    routeWalls(name,11)
+end
+for _,name in ipairs({"CenterToSniperUpper","CenterToGoldUpper","ElbowWest",
+    "ElbowGreenRamp","PowerCoreHallNorth","GoldJumpLandingLink"}) do
+    routeWalls(name,CONFIG.RouteWallHeight)
+end
+routeWalls("CenterToBlueUpper",CONFIG.RouteWallHeight,true)
+-- Outside ramps get short boundary walls, with clear space around every turn.
+for _,name in ipairs({"SniperWindingRampA","SniperWindingRampB","SniperWindingRampC",
+    "BlueOuterRampA","BlueOuterRampB","BlueOuterRampC"}) do
+    routeWalls(name,8,true)
+end
+local function roomWall(name,x,bottom,z,sx,height,sz)
+    return part(name,Vector3.new(sx*SCALE,height,sz*SCALE),
+        CFrame.new(layoutPoint(x,bottom+height/2,z)),colors.stone,Enum.Material.Slate,"Walls")
+end
+-- Enclose the wide rooms, leaving their entrances, lifts, and drops open.
+roomWall("BlueFrontWest",-14,UPPER,54,12,16,0.45)
+roomWall("BlueFrontEast",10.5,UPPER,54,5,16,0.45)
+roomWall("BlueUpperWest",-19.7,UPPER,73,0.45,16,38)
+roomWall("BlueUpperEastRear",19.7,UPPER,82,0.45,16,20)
+roomWall("GoldUpperWestNorth",48,UPPER,-15.5,0.45,16,15)
+roomWall("GoldUpperWestSouth",48,UPPER,15.5,0.45,16,15)
+roomWall("SniperUpperWest",-79.7,SNIPER_TOP,-1,0.45,18,38)
+roomWall("SniperUpperFrontWest",-75,SNIPER_TOP,18,10,14,0.45)
+roomWall("GreenNorthWall",0,0,-73.6,46,14,0.45)
+roomWall("GreenWestWall",-22.6,0,-64,0.45,14,20)
+roomWall("GreenEastWall",22.6,0,-66,0.45,14,16)
+-- Broad chambers get partial dividing walls with 24+ stud passing space.
+roomWall("BlueRoomScreenWest",-11,UPPER,78,8,12,0.5)
+roomWall("BlueRoomScreenEast",11,UPPER,72,8,12,0.5)
+roomWall("GoldRoomScreenNorth",57,UPPER,-14,10,12,0.5)
+roomWall("GoldRoomScreenSouth",83,UPPER,14,10,12,0.5)
+roomWall("GreenCoverWest",-12,0,-61,0.5,8,8)
+roomWall("GreenCoverEast",12,0,-53,0.5,8,8)
+
+-- Build disjoint visible floor patches. Overlapping collision slabs are hidden;
+-- their union remains solid, but two top faces can never flicker at the same Y.
+local EPS=0.000001
+local function cross2(a,b,c)
+    return (b.X-a.X)*(c.Z-a.Z)-(b.Z-a.Z)*(c.X-a.X)
+end
+local function splitPolygon(poly,a,b)
+    local inside,outside={},{}
+    for i,p in ipairs(poly) do
+        local q=poly[i%#poly+1]
+        local dp,dq=cross2(a,b,p),cross2(a,b,q)
+        if dp>=-EPS then table.insert(inside,p) end
+        if dp<=EPS then table.insert(outside,p) end
+        if (dp>EPS and dq< -EPS) or (dp< -EPS and dq>EPS) then
+            local hit=p+(q-p)*(dp/(dp-dq))
+            table.insert(inside,hit)
+            table.insert(outside,hit)
+        end
+    end
+    return inside,outside
+end
+local function area(poly)
+    local total=0
+    for i,p in ipairs(poly) do
+        local q=poly[i%#poly+1]
+        total=total+p.X*q.Z-q.X*p.Z
+    end
+    return total/2
+end
+local function bounds(poly)
+    local xmin,xmax,zmin,zmax=math.huge,-math.huge,math.huge,-math.huge
+    for _,v in ipairs(poly) do
+        xmin,xmax=math.min(xmin,v.X),math.max(xmax,v.X)
+        zmin,zmax=math.min(zmin,v.Z),math.max(zmax,v.Z)
+    end
+    return {xmin,xmax,zmin,zmax}
+end
+local function subtractPolygon(poly,cutter)
+    local pb,cb=bounds(poly),bounds(cutter)
+    if pb[2]<=cb[1]+EPS or cb[2]<=pb[1]+EPS or pb[4]<=cb[3]+EPS or cb[4]<=pb[3]+EPS then
+        return {poly}
+    end
+    local remaining=poly
+    local output={}
+    for i,a in ipairs(cutter) do
+        if #remaining<3 then break end
+        local inside,outside=splitPolygon(remaining,a,cutter[i%#cutter+1])
+        if #outside>=3 and math.abs(area(outside))>0.001 then table.insert(output,outside) end
+        remaining=inside
+    end
+    return output
+end
+local function renderTriangle(a,b,c,color,material)
+    local ab,ac,bc=b-a,c-a,c-b
+    if ab:Dot(ab)>ac:Dot(ac) and ab:Dot(ab)>bc:Dot(bc) then
+        c,a=a,c
+    elseif ac:Dot(ac)>bc:Dot(bc) then
+        a,b=b,a
+    end
+    ab,ac,bc=b-a,c-a,c-b
+    if bc.Magnitude<0.01 then return end
+    local normal=ac:Cross(ab)
+    if normal.Magnitude<0.01 then return end
+    local right=normal.Unit
+    local up=bc:Cross(right).Unit
+    local back=bc.Unit
+    local height=math.abs(ab:Dot(up))
+    if height<0.05 then return end
+    local projection=b-back*ab:Dot(back)
+    local lower=Vector3.new(0,-CONFIG.FloorSurfaceThickness/2,0)
+    for _,t in ipairs({{a,b,projection,right,back},{a,c,projection,-right,-back}}) do
+        local length=math.abs((t[2]-t[1]):Dot(t[5]))
+        if length>=0.05 then
+            local patch=part("FloorPatch",Vector3.new(CONFIG.FloorSurfaceThickness,height,length),
+                CFrame.fromMatrix((t[1]+t[2])/2+lower,t[4],up,t[5]),color,material,"FloorSurfaces",false,"WedgePart")
+            patch:SetAttribute("TriangleA",t[1])
+            patch:SetAttribute("TriangleB",t[2])
+            patch:SetAttribute("TriangleC",t[3])
+            texture(patch,material==Enum.Material.Slate and CONFIG.StoneTexture or CONFIG.MetalTexture)
+        end
+    end
+end
+local function renderPolygon(poly,color,material)
+    if #poly==4 then
+        local first,last=poly[2]-poly[1],poly[4]-poly[1]
+        if first.Magnitude>=0.05 and last.Magnitude>=0.05
+            and math.abs(first.Unit:Dot(last.Unit))<0.000001
+            and ((poly[1]+poly[3])-(poly[2]+poly[4])).Magnitude<0.001 then
+            local right=first.Unit
+            local panel=part("FloorPanel",Vector3.new(first.Magnitude,CONFIG.FloorSurfaceThickness,last.Magnitude),
+                CFrame.fromMatrix((poly[1]+poly[3])/2-Vector3.new(0,CONFIG.FloorSurfaceThickness/2,0),
+                    right,Vector3.new(0,1,0),right:Cross(Vector3.new(0,1,0))),
+                color,material,"FloorSurfaces",false)
+            for i,v in ipairs(poly) do panel:SetAttribute("Quad"..i,v) end
+            texture(panel,material==Enum.Material.Slate and CONFIG.StoneTexture or CONFIG.MetalTexture)
+            return
+        end
+    end
+    if #poly<=8 then
+        for i=2,#poly-1 do renderTriangle(poly[1],poly[i],poly[i+1],color,material) end
+        return
+    end
+    -- A center fan avoids thin edge triangles that Roblox would enlarge to its
+    -- minimum Part size, producing a new visible overlap along circular rims.
+    local center=Vector3.new(0,0,0)
+    for _,v in ipairs(poly) do center=center+v end
+    center=center/#poly
+    for i,v in ipairs(poly) do renderTriangle(center,v,poly[i%#poly+1],color,material) end
+end
+local layers={}
+for _,p in ipairs(folders.Floors:GetChildren()) do
+    local polygon={}
+    local top
+    if p.Shape==Enum.PartType.Cylinder and math.abs(p.CFrame.RightVector.Y)>0.999 then
+        top=p.Position.Y+p.Size.X/2
+        for i=0,127 do
+            local angle=i*math.pi/64
+            local v=p.CFrame:PointToWorldSpace(Vector3.new(0,math.cos(angle)*p.Size.Y/2,math.sin(angle)*p.Size.Z/2))
+            table.insert(polygon,Vector3.new(v.X,top,v.Z))
+        end
+    elseif p.CFrame.UpVector.Y>0.99999 then
+        top=p.Position.Y+p.Size.Y/2
+        for _,v in ipairs({{-1,-1},{1,-1},{1,1},{-1,1}}) do
+            table.insert(polygon,p.CFrame:PointToWorldSpace(Vector3.new(v[1]*p.Size.X/2,p.Size.Y/2,v[2]*p.Size.Z/2)))
+        end
+    end
+    if #polygon>=3 then
+        if area(polygon)<0 then
+            local reverse={}
+            for i=#polygon,1,-1 do table.insert(reverse,polygon[i]) end
+            polygon=reverse
+        end
+        local key=string.format("%.4f",top)
+        layers[key]=layers[key] or {}
+        local pending={polygon}
+        for _,occupied in ipairs(layers[key]) do
+            local nextPieces={}
+            for _,piece in ipairs(pending) do
+                for _,fragment in ipairs(subtractPolygon(piece,occupied)) do table.insert(nextPieces,fragment) end
+            end
+            pending=nextPieces
+            if #pending==0 then break end
+        end
+        for _,piece in ipairs(pending) do
+            renderPolygon(piece,p.Color,p.Material)
+        end
+        table.insert(layers[key],polygon)
+        -- Retain substantial wood bodies just below their newly drawn top.
+        local thickness=p.Shape==Enum.PartType.Cylinder and p.Size.X or p.Size.Y
+        if thickness>2 then
+            local size=p.Size
+            if p.Shape==Enum.PartType.Cylinder then size=Vector3.new(size.X-0.15,size.Y,size.Z)
+            else size=Vector3.new(size.X,size.Y-0.15,size.Z) end
+            local body=part(p.Name.."_Body",size,p.CFrame+Vector3.new(0,-0.075,0),p.Color,p.Material,"Architecture",false)
+            body.Shape=p.Shape
+        end
+        p.Transparency=1
+        p.CastShadow=false
+    end
+end
+map:SetAttribute("FloorPatches",#folders.FloorSurfaces:GetChildren())
+map:SetAttribute("WallParts",#folders.Walls:GetChildren())
+
 local heartbeat
 heartbeat=RunService.Heartbeat:Connect(function()
     if map.Parent==nil then heartbeat:Disconnect() return end
@@ -543,7 +862,8 @@ heartbeat=RunService.Heartbeat:Connect(function()
             elseif (cooldown[root] or 0)<now then
                 for _,shaft in ipairs(lifts) do
                     local p=shaft.part.CFrame:PointToObjectSpace(root.Position)
-                    if math.abs(p.X)<3 and math.abs(p.Z)<3 and p.Y>-2.5 and p.Y<4 then
+                    if math.abs(p.X)<shaft.part.Size.X/2 and math.abs(p.Z)<shaft.part.Size.Z/2
+                        and p.Y>-shaft.part.Size.Y/2 and p.Y<shaft.part.Size.Y/2+1.5 then
                         local delta=shaft.target-root.Position
                         local t=shaft.time
                         local gravity=Workspace.Gravity*CONFIG.LiftGravityMultiplier
@@ -564,7 +884,7 @@ if CONFIG.EnableSpawns then
         spawn.Neutral=true
         spawn.Duration=0
         spawn.Size=Vector3.new(5,0.2,5)
-        spawn.CFrame=CFrame.new(world(pos[1],pos[2]+0.1,pos[3]))
+        spawn.CFrame=CFrame.new(layoutPoint(pos[1],pos[2]+0.1,pos[3]))
         spawn.Transparency=1
         spawn.CanCollide=false
         spawn.CanQuery=false
@@ -578,8 +898,8 @@ if CONFIG.SetAtmosphere then
     Lighting.Ambient=Color3.fromRGB(62,83,81)
     Lighting.OutdoorAmbient=Color3.fromRGB(112,141,126)
     Lighting.FogColor=Color3.fromRGB(104,186,170)
-    Lighting.FogStart=120
-    Lighting.FogEnd=380
+    Lighting.FogStart=CONFIG.FootprintStuds*0.6
+    Lighting.FogEnd=CONFIG.FootprintStuds*2
     local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere")
     if not atmosphere then
         atmosphere=Instance.new("Atmosphere")
@@ -592,4 +912,4 @@ if CONFIG.SetAtmosphere then
         atmosphere.Parent=Lighting
     end
 end
-print("Guardian generated from supplied references: 3 lifts, 2 Gold drop holes, 4 spawns.")
+print("Guardian 800 x 800 generated: enclosed routes, clean floor surfaces, 3 lifts, 4 spawns.")
