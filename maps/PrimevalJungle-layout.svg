@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1450" height="1240" viewBox="0 0 1450 1240" role="img" aria-labelledby="title desc">
-<title id="title">Guardian reconstruction — generated layout and movement routes</title>
+<title id="title">Primeval Jungle — generated layout and movement routes</title>
 <desc id="desc">Top-down footprint of the Roblox Lua approximation. North is Green, south is Blue, west is Sniper, and east is Gold. Floor colors indicate height. Three lift routes and two eighteen-stud jump routes are shown. This schematic does not verify a one-to-one Halo reconstruction.</desc>
-<metadata>Source: Guardian.lua; SHA-256: d3cd0e65ae65cc0bac15fd0d303c002f63ccb5996ca5a844d7a9f182b95caa31; Export: scene.json; Offline Lua mock and oriented geometry checks; not Roblox engine validation</metadata>
+<metadata>Source: PrimevalJungle.lua; SHA-256: 3470bb6a68a2456659d9b37a69eac14a9b773881d73eb7450e2065dc9c2bca55; Export: scene.json; Offline Lua mock and oriented geometry checks; not Roblox engine validation</metadata>
 <defs>
   <style>
     text { font-family: "DejaVu Sans", Arial, sans-serif; fill: #d9e7e4; }
@@ -25,9 +25,9 @@
 <rect width="1450" height="1240" fill="#102124"/>
 <rect x="36" y="160" width="1022" height="910" rx="14" fill="#14282c" stroke="#2b4347"/>
 <rect x="36" y="160" width="1022" height="910" rx="14" fill="url(#grid)"/>
-<text x="44.00" y="64.00" class="title" >GUARDIAN</text>
+<text x="44.00" y="64.00" class="title" >PRIMEVAL JUNGLE</text>
 <text x="46.00" y="100.00" class="subtitle" >800 × 800 stud arena + enclosed movement routes</text>
-<text x="46.00" y="129.00" class="small" >Expanded Guardian layout • exact floor footprint • schematic, not an in-game render</text>
+<text x="46.00" y="129.00" class="small" >Primeval Jungle layout • exact floor footprint • schematic, not an in-game render</text>
 <text x="1035.00" y="180.00" class="tiny" text-anchor="end">TOP DOWN</text>
 <g><title>CenterLower · approximate top 0.0 studs above lower floor</title>
 <circle cx="516.000" cy="550.000" r="91.300" fill="#496a76" stroke="#182e34" stroke-width="0.65" opacity="1"/>
@@ -861,5 +861,5 @@
 <text x="245.00" y="1124.00" class="small" >Projected from generated parts, using their actual rotations.</text>
 <text x="245.00" y="1149.00" class="small" >Trees and surface decoration omitted to keep routes readable.</text>
 <text x="245.00" y="1174.00" class="small" >Playable floors span 800 × 800 studs. The surrounding forest extends beyond them.</text>
-<text x="47.00" y="1213.00" class="tiny" >Geometry source SHA-256: d3cd0e65ae65cc0b…  ·  104 floor parts  ·  3 lifts</text>
+<text x="47.00" y="1213.00" class="tiny" >Geometry source SHA-256: 3470bb6a68a24566…  ·  104 floor parts  ·  3 lifts</text>
 </svg>

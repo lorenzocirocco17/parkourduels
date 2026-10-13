@@ -1,10 +1,12 @@
-# Guardian — 800 × 800 stud movement arena
+# Primeval Jungle — 800 × 800 stud movement arena
 
-[Download/open Guardian.lua](Guardian.lua), put its contents into a **Script in ServerScriptService** in Roblox Studio, and press **Play**. The script generates `Workspace.Guardian` and runs its lifts, spawns, and fall reset. The file is self-contained; no package installation or texture uploads are needed.
+[Download/open PrimevalJungle.lua](PrimevalJungle.lua), put its contents into a **Script in ServerScriptService** in Roblox Studio, and press **Play**. The script generates `Workspace["Primeval Jungle"]` and runs its lifts, spawns, and fall reset. The file is self-contained; no package installation or texture uploads are needed.
 
-[View the layout diagram](maps/Guardian-layout.png). This is a schematic of the generated geometry, not a Roblox screenshot. The layout follows your Guardian article and screenshots, with inferred geometry adapted for your game.
+`Guardian.lua` remains an identical copy for existing download links. Use only one generator script. When upgrading, replace your previous script; the new generator automatically replaces its older `Guardian` model.
 
-[View the forest scenery diagram](maps/Guardian-scenery.png). This shows the tree placement and leafy underlay; it is not a lighting render.
+[View the layout diagram](maps/PrimevalJungle-layout.png). This is a schematic of the generated geometry, not a Roblox screenshot. The layout follows your Guardian article and screenshots, with inferred geometry adapted for your game.
+
+[View the forest scenery diagram](maps/PrimevalJungle-scenery.png). This shows the tree placement and leafy underlay; it is not a lighting render.
 
 ## Forest and lighting update
 
@@ -62,7 +64,7 @@ Edit `CONFIG` near the beginning of the file:
 
 `Floors` contains solid collision geometry. Its flat slabs are intentionally invisible; `FloorSurfaces` contains their visible union. Editing one folder without updating the other can change the appearance or collision. Keep the generator as the source of truth when changing layout. Walls collide; forest, glyphs, surface details, and suspended scenery do not obstruct players.
 
-Generated parts are recreated each time the server starts. To inspect or edit a static copy, copy `Workspace.Guardian` during Play, stop, paste it into Workspace, and disable the generator while editing. A pasted static model does not keep lift/fall callbacks, which require the active script or a separate controller.
+Generated parts are recreated each time the server starts. To inspect or edit a static copy, copy `Workspace["Primeval Jungle"]` during Play, stop, paste it into Workspace, and disable the generator while editing. A pasted static model does not keep lift/fall callbacks, which require the active script or a separate controller.
 
 ## Validation
 

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1180" viewBox="0 0 1100 1180">
 <rect width="1100" height="1180" fill="#122321"/>
 <style>text{font-family:DejaVu Sans,Arial,sans-serif;fill:#e5eee6}.t{font-size:32px;font-weight:700}.s{font-size:16px;fill:#bccfc2}</style>
-<text x="48" y="58" class="t">GUARDIAN — FOREST SCENERY</text>
+<text x="48" y="58" class="t">PRIMEVAL JUNGLE — FOREST SCENERY</text>
 <text x="48" y="91" class="s">192 surrounding trees • leafy underlay • scenery remains outside the arena</text>
 <text x="48" y="120" class="s">Top-down placement diagram; lighting and appearance must be viewed in Roblox Studio.</text>
 <rect x="74.19999999999999" y="154.2" width="951.6" height="951.6" fill="#364b2b"/>
@@ -1423,5 +1423,5 @@
 <rect x="306.0" y="386.0" width="488.0" height="488.0" fill="none" stroke="#e4dcb1" stroke-width="1.5" stroke-dasharray="7 5"/>
 <text x="48" y="1112" class="s">Dashed square = 800 × 800 stud playable bounds. All forest geometry lies outside it.</text>
 <text x="48" y="1142" class="s">Trees, vines, and leaf litter are decorative: collision, touch, and queries are disabled.</text>
-<metadata>Source SHA256 d3cd0e65ae65cc0bac15fd0d303c002f63ccb5996ca5a844d7a9f182b95caa31; scenery diagram, not an engine render</metadata>
+<metadata>Source SHA256 3470bb6a68a2456659d9b37a69eac14a9b773881d73eb7450e2065dc9c2bca55; scenery diagram, not an engine render</metadata>
 </svg>

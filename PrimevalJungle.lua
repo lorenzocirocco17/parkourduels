@@ -1,4 +1,4 @@
--- Guardian reconstruction for Parkour Duels. Paste into a server Script.
+-- Primeval Jungle for Parkour Duels. Paste into a server Script.
 -- References: the supplied Guardian article and overhead/in-game screenshots.
 -- Expanded 800 x 800 stud movement arena. Vertical levels remain movement-sized.
 -- Floor coordinates mean TOP surfaces. Keep your existing movement controller.
@@ -38,17 +38,23 @@ local CONFIG = {
 }
 local UPPER = 16 -- Thin deck slabs leave 15 studs of clear space below.
 local SNIPER_TOP = 24
+local MAP_NAME = "Primeval Jungle"
+-- Keep ownership and effect IDs stable when upgrading earlier Guardian scripts.
 local GENERATOR_ID = "ParkourDuelsGuardian_v3"
-local old = Workspace:FindFirstChild("Guardian")
-if old then
-    if old:GetAttribute("GeneratorId") ~= GENERATOR_ID
-        and old:GetAttribute("ApproximateReconstruction") ~= true then
-        error("Workspace.Guardian already exists and is not this generator's model. Rename it first.")
-    end
-    old:Destroy()
+local function isGeneratedMap(candidate)
+    local id = candidate:GetAttribute("GeneratorId")
+    return id == GENERATOR_ID or id == "ParkourDuelsGuardian_v2"
+        or (id == nil and candidate:GetAttribute("ApproximateReconstruction") == true)
 end
+local old = Workspace:FindFirstChild(MAP_NAME)
+if old and not isGeneratedMap(old) then
+    error("Workspace[\"" .. MAP_NAME .. "\"] already exists and is not this generator's model. Rename it first.")
+end
+local legacy = Workspace:FindFirstChild("Guardian")
+if old then old:Destroy() end
+if legacy and isGeneratedMap(legacy) then legacy:Destroy() end
 local map = Instance.new("Model")
-map.Name = "Guardian"
+map.Name = MAP_NAME
 map:SetAttribute("GeneratorId", GENERATOR_ID)
 map:SetAttribute("ApproximateReconstruction", true)
 map:SetAttribute("ReferenceRevision", "User article and screenshots")
@@ -998,7 +1004,7 @@ end)
 if CONFIG.EnableSpawns then
     for i,pos in ipairs({{0,UPPER,75},{56,UPPER,12},{-68,SNIPER_TOP,0},{-14,0,-58}}) do
         local spawn=Instance.new("SpawnLocation")
-        spawn.Name="GuardianSpawn"..i
+        spawn.Name="PrimevalJungleSpawn"..i
         spawn.Anchored=true
         spawn.Neutral=true
         spawn.Duration=0
@@ -1061,4 +1067,4 @@ if CONFIG.SetAtmosphere then
     bloom.Size=20
     bloom.Threshold=1.4
 end
-print("Guardian generated: leafy ground, "..treeCount.." scenic forest trees, readable dusk lighting.")
+print(MAP_NAME.." generated: leafy ground, "..treeCount.." scenic forest trees, readable dusk lighting.")
