@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1450" height="1240" viewBox="0 0 1450 1240" role="img" aria-labelledby="title desc">
 <title id="title">Guardian reconstruction — generated layout and movement routes</title>
 <desc id="desc">Top-down footprint of the Roblox Lua approximation. North is Green, south is Blue, west is Sniper, and east is Gold. Floor colors indicate height. Three lift routes and two eighteen-stud jump routes are shown. This schematic does not verify a one-to-one Halo reconstruction.</desc>
-<metadata>Source: Guardian.lua; SHA-256: a3640da4aa1dbc0828aa1498102877c5b91439cf51ad1734b685a53a3dec43b5; Export: scene.json; Offline Lua mock and oriented geometry checks; not Roblox engine validation</metadata>
+<metadata>Source: Guardian.lua; SHA-256: d3cd0e65ae65cc0bac15fd0d303c002f63ccb5996ca5a844d7a9f182b95caa31; Export: scene.json; Offline Lua mock and oriented geometry checks; not Roblox engine validation</metadata>
 <defs>
   <style>
     text { font-family: "DejaVu Sans", Arial, sans-serif; fill: #d9e7e4; }
@@ -861,5 +861,5 @@
 <text x="245.00" y="1124.00" class="small" >Projected from generated parts, using their actual rotations.</text>
 <text x="245.00" y="1149.00" class="small" >Trees and surface decoration omitted to keep routes readable.</text>
 <text x="245.00" y="1174.00" class="small" >Playable floors span 800 × 800 studs. The surrounding forest extends beyond them.</text>
-<text x="47.00" y="1213.00" class="tiny" >Geometry source SHA-256: a3640da4aa1dbc08…  ·  104 floor parts  ·  3 lifts</text>
+<text x="47.00" y="1213.00" class="tiny" >Geometry source SHA-256: d3cd0e65ae65cc0b…  ·  104 floor parts  ·  3 lifts</text>
 </svg>

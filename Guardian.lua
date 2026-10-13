@@ -18,6 +18,17 @@ local CONFIG = {
     EnableVoidReset = true, -- Disable if other playable areas exist below this map.
     VoidDepth = 40, -- Kill before the default Studio baseplate can catch falling players.
     ForestDetail = true,
+    ForestBands = 3,
+    ForestTreesPerBand = 64, -- 192 scenic trees, plus the large Green landmark.
+    ForestEdgeGap = 110, -- Keeps trunks AND canopy outside the playable square.
+    ForestBandSpacing = 70,
+    EnableLeafGround = true,
+    LeafGroundMargin = 380,
+    LeafClusters = 180,
+    LeafTexture = "", -- Optional permitted leaf-litter image, otherwise native leaves.
+    LightingClockTime = 16.35,
+    LightingBrightness = 2.25,
+    MistDensity = 0.22,
     -- Match your controller's 15% gravity cancellation while airborne.
     -- Use 1 if testing without air float; lift launch calculations use this factor.
     LiftGravityMultiplier = 0.85,
@@ -62,7 +73,7 @@ local colors = {
     white = Color3.fromRGB(204, 246, 241),
 }
 local folders = {}
-for _, name in ipairs({"Floors", "Walls", "Architecture", "Details", "Forest", "Gameplay", "Callouts", "FloorSurfaces"}) do
+for _, name in ipairs({"Floors", "Walls", "Architecture", "Details", "Forest", "Gameplay", "Callouts", "FloorSurfaces", "ForestFloor"}) do
     local f = Instance.new("Folder")
     f.Name = name
     f.Parent = map
@@ -436,38 +447,9 @@ for _,pos in ipairs({{-76,0},{68,0},{0,78}}) do
     end
 end
 
--- Jungle: close trunks frame the rooms; scenery collision is disabled.
+-- Scenery is generated after resizing, so its density and clearance use actual
+-- studs instead of enlarging a sparse ring into giant, widely spaced trees.
 local rng=Random.new(1703)
-if CONFIG.ForestDetail then
-    for i=1,20 do
-        local angle=i*2*math.pi/20
-        local radius=rng:NextNumber(124,151)
-        local x,z=math.cos(angle)*radius,math.sin(angle)*radius
-        local height=rng:NextNumber(90,136)
-        local tree=block("AncientForestTrunk",x,height/2-50,z,12,height,12,
-            colors.bark,Enum.Material.Wood,"Forest",false)
-        tree.CFrame=tree.CFrame*CFrame.Angles(0,angle,rng:NextNumber(-0.08,0.08))
-        for branch=1,3 do
-            local crown=block("ForestCanopy",x+rng:NextNumber(-12,12),height-52+branch*5,
-                z+rng:NextNumber(-12,12),rng:NextNumber(30,48),20,rng:NextNumber(30,48),
-                colors.leaves,Enum.Material.Grass,"Forest",false)
-            crown.Shape=Enum.PartType.Ball
-        end
-        -- Hanging vine strips: no collision and no particle load.
-        for vine=1,3 do
-            block("HangingVine",x+rng:NextNumber(-7,7),height-60,z+rng:NextNumber(-7,7),
-                0.3,rng:NextNumber(16,32),0.35,colors.moss,Enum.Material.Grass,"Forest",false)
-        end
-    end
-    -- Giant trunk behind Green ties the architecture to the screenshot's tree.
-    local giant=block("GreenAncientTree",0,22,-94,34,125,28,
-        colors.bark,Enum.Material.Wood,"Forest",false)
-    giant.CFrame=giant.CFrame*CFrame.Angles(0,0,-0.10)
-    for i=1,16 do
-        block("GreenBarkVein",rng:NextNumber(-15,15),rng:NextNumber(8,58),-79.5,
-            0.5,rng:NextNumber(12,30),0.5,colors.moss,Enum.Material.Grass,"Forest",false)
-    end
-end
 -- Small edge moss, never distributed through the middle of a movement lane.
 for _,pos in ipairs({{-73,SNIPER_TOP,14},{18,0,-68},{-18,UPPER,88},{85,UPPER,19}}) do
     for i=1,5 do
@@ -848,6 +830,143 @@ end
 map:SetAttribute("FloorPatches",#folders.FloorSurfaces:GetChildren())
 map:SetAttribute("WallParts",#folders.Walls:GetChildren())
 
+-- A leafy underlay covers the view through the arena gaps. It is visual only.
+-- An existing Studio baseplate also receives the appearance without moving it.
+local baseplate=Workspace:FindFirstChild("Baseplate")
+if baseplate and not baseplate:IsA("BasePart") then baseplate=nil end
+local fallbackGround=CONFIG.Origin.Y-72
+local baseplateTop=baseplate and (baseplate.Position.Y+baseplate.Size.Y/2) or fallbackGround
+local groundTop=math.min(baseplateTop+0.06,CONFIG.Origin.Y-CONFIG.VoidDepth-10)
+map:SetAttribute("SceneGroundTop",groundTop)
+if CONFIG.EnableLeafGround then
+    local groundColor=Color3.fromRGB(54,75,43)
+    if baseplate then
+        baseplate.Material=Enum.Material.LeafyGrass
+        baseplate.Color=groundColor
+        -- Hide the default checker grid instead of layering leaves over it.
+        for _,mark in ipairs(baseplate:GetChildren()) do
+            if (mark:IsA("Texture") or mark:IsA("Decal")) and mark.Face==Enum.NormalId.Top then
+                if mark.Name~="GuardianLeafTexture" then mark.Transparency=1 end
+            end
+        end
+        local topTexture=baseplate:FindFirstChild("GuardianLeafTexture")
+        if CONFIG.LeafTexture~="" then
+            if not topTexture then
+                topTexture=Instance.new("Texture")
+                topTexture.Name="GuardianLeafTexture"
+                topTexture.Face=Enum.NormalId.Top
+                topTexture.Parent=baseplate
+            end
+            topTexture.Texture=CONFIG.LeafTexture
+            topTexture.StudsPerTileU=18
+            topTexture.StudsPerTileV=18
+            topTexture.Transparency=0
+        elseif topTexture then
+            topTexture:Destroy()
+        end
+    end
+    local groundSpan=CONFIG.FootprintStuds+CONFIG.LeafGroundMargin*2
+    local ground=part("LeafGround",Vector3.new(groundSpan,2,groundSpan),
+        CFrame.new(CONFIG.Origin.X,groundTop-1,CONFIG.Origin.Z),groundColor,
+        Enum.Material.LeafyGrass,"ForestFloor",false)
+    ground.CastShadow=false
+    ground:SetAttribute("DecorativeOnly",true)
+    if CONFIG.LeafTexture~="" then
+        local image=Instance.new("Texture")
+        image.Name="LeafLitterTexture"
+        image.Face=Enum.NormalId.Top
+        image.Texture=CONFIG.LeafTexture
+        image.StudsPerTileU=18
+        image.StudsPerTileV=18
+        image.Parent=ground
+    end
+    -- Flat oval leaves add real litter detail without needing an uploaded asset.
+    local leafColors={Color3.fromRGB(76,101,48),Color3.fromRGB(97,115,57),
+        Color3.fromRGB(111,101,57),Color3.fromRGB(58,85,42)}
+    local litterRng=Random.new(7813)
+    for cluster=1,CONFIG.LeafClusters do
+        local x=CONFIG.Origin.X+litterRng:NextNumber(-groundSpan/2+12,groundSpan/2-12)
+        local z=CONFIG.Origin.Z+litterRng:NextNumber(-groundSpan/2+12,groundSpan/2-12)
+        for leaf=1,3 do
+            local p=part("LeafPatch",Vector3.new(litterRng:NextNumber(2.5,4.5),0.12,litterRng:NextNumber(5,9)),
+                CFrame.new(x+litterRng:NextNumber(-3,3),groundTop+0.10+leaf*0.045,z+litterRng:NextNumber(-3,3))
+                    *CFrame.Angles(0,litterRng:NextNumber(0,math.pi*2),0),
+                leafColors[litterRng:NextInteger(1,#leafColors)],Enum.Material.Grass,"ForestFloor",false)
+            p.Shape=Enum.PartType.Ball
+            p.CastShadow=false
+            p:SetAttribute("DecorativeOnly",true)
+        end
+    end
+end
+
+-- Three staggered square belts immerse all four sides without entering the map.
+local treeRng=Random.new(1703)
+local treeCount=0
+if CONFIG.ForestDetail then
+    local half=CONFIG.FootprintStuds/2
+    local perBand=math.max(4,math.floor(CONFIG.ForestTreesPerBand/4)*4)
+    for band=1,CONFIG.ForestBands do
+        local radius=half+CONFIG.ForestEdgeGap+(band-1)*CONFIG.ForestBandSpacing
+        local perSide=perBand/4
+        for index=1,perBand do
+            local side=math.floor((index-1)/perSide)
+            local slot=(index-1)%perSide
+            local along=((slot+0.5+treeRng:NextNumber(-0.18,0.18)+(band-1)*0.15)/perSide*2-1)*radius
+            local edge=radius+treeRng:NextNumber(-8,8)
+            local x,z
+            if side==0 then x,z=along,-edge
+            elseif side==1 then x,z=edge,along
+            elseif side==2 then x,z=-along,edge
+            else x,z=-edge,-along end
+            x,z=x+CONFIG.Origin.X,z+CONFIG.Origin.Z
+            local height=treeRng:NextNumber(180,270)+(band-1)*12
+            local width=treeRng:NextNumber(9,16)
+            local center=Vector3.new(x,groundTop+height/2-6,z)
+            local trunk=part("AncientForestTrunk",Vector3.new(height,width,width),
+                CFrame.new(center)*CFrame.Angles(0,0,math.pi/2+treeRng:NextNumber(-0.035,0.035)),
+                colors.bark,Enum.Material.Wood,"Forest",false)
+            trunk.Shape=Enum.PartType.Cylinder
+            trunk.CastShadow=band==1
+            trunk:SetAttribute("DecorativeTree",true)
+            trunk:SetAttribute("ForestBand",band)
+            treeCount=treeCount+1
+            local top=groundTop+height-6
+            for crown=1,3 do
+                local canopy=part("ForestCanopy",Vector3.new(treeRng:NextNumber(60,88),treeRng:NextNumber(34,55),treeRng:NextNumber(58,86)),
+                    CFrame.new(x+treeRng:NextNumber(-18,18),top-18+(crown-1)*12,z+treeRng:NextNumber(-18,18)),
+                    crown==2 and Color3.fromRGB(49,83,48) or colors.leaves,Enum.Material.Grass,"Forest",false)
+                canopy.Shape=Enum.PartType.Ball
+                canopy.CastShadow=false
+            end
+            -- A branch and a vine silhouette add depth to the closest belt.
+            if band==1 then
+                local a=Vector3.new(x,top-38,z)
+                local b=a+Vector3.new(treeRng:NextNumber(-20,20),13,treeRng:NextNumber(-20,20))
+                local branch=part("ForestBranch",Vector3.new(4,4,(b-a).Magnitude),
+                    CFrame.lookAt((a+b)/2,b),colors.bark,Enum.Material.Wood,"Forest",false)
+                branch.CastShadow=false
+                local vine=part("HangingVine",Vector3.new(0.45,treeRng:NextNumber(25,48),0.5),
+                    CFrame.new(x+12,top-42,z+8),colors.moss,Enum.Material.Grass,"Forest",false)
+                vine.CastShadow=false
+            end
+        end
+    end
+    -- Keep Green's ancient tree as a distant landmark, rooted into the litter.
+    local giantZ=CONFIG.Origin.Z-half-CONFIG.ForestEdgeGap-40
+    local giant=part("GreenAncientTree",Vector3.new(65,300,55),
+        CFrame.new(CONFIG.Origin.X+6,groundTop+144,giantZ),colors.bark,Enum.Material.Wood,"Forest",false)
+    giant:SetAttribute("DecorativeOnly",true)
+    giant.CastShadow=false
+    for crown=1,3 do
+        local canopy=part("AncientTreeCrown",Vector3.new(100,58,92),
+            CFrame.new(CONFIG.Origin.X+(crown-2)*20,groundTop+280+crown*9,giantZ),
+            colors.leaves,Enum.Material.Grass,"Forest",false)
+        canopy.Shape=Enum.PartType.Ball
+        canopy.CastShadow=false
+    end
+end
+map:SetAttribute("ForestTreeCount",treeCount)
+
 local heartbeat
 heartbeat=RunService.Heartbeat:Connect(function()
     if map.Parent==nil then heartbeat:Disconnect() return end
@@ -893,23 +1012,53 @@ if CONFIG.EnableSpawns then
     end
 end
 if CONFIG.SetAtmosphere then
-    Lighting.ClockTime=13.5
-    Lighting.Brightness=1.8
-    Lighting.Ambient=Color3.fromRGB(62,83,81)
-    Lighting.OutdoorAmbient=Color3.fromRGB(112,141,126)
-    Lighting.FogColor=Color3.fromRGB(104,186,170)
-    Lighting.FogStart=CONFIG.FootprintStuds*0.6
-    Lighting.FogEnd=CONFIG.FootprintStuds*2
-    local atmosphere=Lighting:FindFirstChildOfClass("Atmosphere")
+    -- Late-afternoon light with cool mist; ambient fill keeps enclosed rooms clear.
+    Lighting.ClockTime=CONFIG.LightingClockTime
+    Lighting.Brightness=CONFIG.LightingBrightness
+    Lighting.ExposureCompensation=0.15
+    Lighting.Ambient=Color3.fromRGB(96,113,119)
+    Lighting.OutdoorAmbient=Color3.fromRGB(130,151,141)
+    Lighting.EnvironmentDiffuseScale=0.65
+    Lighting.EnvironmentSpecularScale=0.55
+    Lighting.GlobalShadows=true
+    Lighting.ShadowSoftness=0.45
+    Lighting.FogColor=Color3.fromRGB(99,135,139)
+    Lighting.FogStart=CONFIG.FootprintStuds*0.42
+    Lighting.FogEnd=CONFIG.FootprintStuds*1.7
+    local atmosphere=Lighting:FindFirstChild("GuardianAtmosphere") or Lighting:FindFirstChildOfClass("Atmosphere")
     if not atmosphere then
         atmosphere=Instance.new("Atmosphere")
         atmosphere.Name="GuardianAtmosphere"
-        atmosphere.Density=0.30
-        atmosphere.Offset=0.12
-        atmosphere.Color=Color3.fromRGB(149,210,183)
-        atmosphere.Decay=Color3.fromRGB(55,91,74)
-        atmosphere.Haze=1.8
         atmosphere.Parent=Lighting
     end
+    -- Apply on every run, including when the previous version created it.
+    atmosphere.Density=CONFIG.MistDensity
+    atmosphere.Offset=0.12
+    atmosphere.Color=Color3.fromRGB(145,180,176)
+    atmosphere.Decay=Color3.fromRGB(61,85,99)
+    atmosphere.Haze=1.3
+    atmosphere.Glare=0.10
+    local function ownedEffect(name,class)
+        local effect=Lighting:FindFirstChild(name)
+        if effect and not effect:IsA(class) then
+            error("Lighting."..name.." must be a "..class)
+        end
+        if not effect then
+            effect=Instance.new(class)
+            effect.Name=name
+            effect.Parent=Lighting
+        end
+        effect.Enabled=true
+        return effect
+    end
+    local grade=ownedEffect("GuardianColorGrade","ColorCorrectionEffect")
+    grade.Brightness=0.015
+    grade.Contrast=0.06
+    grade.Saturation=-0.07
+    grade.TintColor=Color3.fromRGB(226,239,238)
+    local bloom=ownedEffect("GuardianBloom","BloomEffect")
+    bloom.Intensity=0.10
+    bloom.Size=20
+    bloom.Threshold=1.4
 end
-print("Guardian 800 x 800 generated: enclosed routes, clean floor surfaces, 3 lifts, 4 spawns.")
+print("Guardian generated: leafy ground, "..treeCount.." scenic forest trees, readable dusk lighting.")

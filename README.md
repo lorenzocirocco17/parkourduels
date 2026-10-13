@@ -4,7 +4,17 @@
 
 [View the layout diagram](maps/Guardian-layout.png). This is a schematic of the generated geometry, not a Roblox screenshot. The layout follows your Guardian article and screenshots, with inferred geometry adapted for your game.
 
-## Changes in this version
+[View the forest scenery diagram](maps/Guardian-scenery.png). This shows the tree placement and leafy underlay; it is not a lighting render.
+
+## Forest and lighting update
+
+The baseplate beneath the arena now uses native **LeafyGrass** and green/brown fallen-leaf detail. A noncolliding underlay covers the view beneath the arena even if your place has no Baseplate. If `Workspace.Baseplate` exists, its material/color are updated and its top checker texture is hidden; its size, position, and collision settings are preserved.
+
+The forest now has **192 trees in three staggered bands**, plus the large Green landmark, with layered crowns, nearby branches, and hanging vines. Trees are generated in actual studs after arena resizing. Every trunk, canopy, vine, and leaf patch is anchored and has collision, touch, and query disabled. The surrounding trees stay outside the playable square; they provide scenery and do not supply movement platforms.
+
+Lighting uses late-afternoon daylight, cool mist, gentle color grading, and restrained bloom. Ambient light is brighter inside covered rooms so the atmosphere stays readable. The script reuses its lighting effects and reapplies settings on each rerun, including updating the previous version's Atmosphere. Exact visual brightness still needs checking in Studio with your display and graphics settings.
+
+## Arena features
 
 - The playable floor footprint is **exactly 800 × 800 studs**, centered around `CONFIG.Origin`. The forest scenery extends beyond that footprint.
 - Rooms, platforms, ramps, bridges, architecture, and scenery have been enlarged horizontally. Main floors remain 16 studs apart, Sniper's upper deck remains another 8 studs higher, and the two optional jump gaps remain **18 real studs** through extended approach runways.
@@ -37,6 +47,13 @@ Edit `CONFIG` near the beginning of the file:
 | `RouteWallHeight` | Default 14 studs for main upper-route walls. |
 | `SetAtmosphere` | Applies forest lighting/haze; set false before running to keep your lighting. |
 | `ForestDetail` | Disables surrounding trunks/canopies/vines when false. |
+| `ForestBands` / `ForestTreesPerBand` | Defaults 3 / 64, giving 192 surrounding trees. Reduce these for fewer scenery parts. |
+| `ForestEdgeGap` / `ForestBandSpacing` | Defaults 110 / 70 studs, keeping crowns outside the arena and adding forest depth. |
+| `EnableLeafGround` | Adds the leafy underlay and updates an existing Baseplate's appearance. |
+| `LeafGroundMargin` / `LeafClusters` | Defaults 380 / 180; controls the underlay's outer coverage and fallen-leaf detail. |
+| `LeafTexture` | Optional permitted leaf-litter texture ID; empty uses native LeafyGrass and procedural leaves. |
+| `LightingClockTime` / `LightingBrightness` | Defaults 16.35 / 2.25 for readable afternoon lighting. |
+| `MistDensity` | Default 0.22; controls the forest atmosphere density. |
 | `EnableSpawns` | Enables four neutral spawns. Disable other spawn locations if you want everyone on this map. |
 | `EnableLifts` | Enables the three launch routes and their approach pads. |
 | `LiftGravityMultiplier` | Default 0.85 matches air float; use 1 when testing without it. |
@@ -51,4 +68,4 @@ Generated parts are recreated each time the server starts. To inspect or edit a 
 
 Offline checks parse and execute the Lua using a Roblox API double with real CFrame math. They check lift trajectories and character clearance, supported spawns, drop openings, jump paths, walking routes and ramp turns, safe regeneration, exact floor extent, and visible surface overlap. Rendering checks compare actual WedgePart/Part face geometry with the intended polygons.
 
-Roblox Studio is unavailable in the cloud environment. Actual Humanoid/controller behavior, visible floor quality in motion, multiplayer, and device performance still need Studio playtesting before publishing your place. This version has more geometry than the smaller map; check performance on your target devices.
+Roblox Studio is unavailable in the cloud environment. Actual Humanoid/controller behavior, leaf/forest appearance, lighting visibility, visible floor quality in motion, multiplayer, and device performance still need Studio playtesting before publishing your place. The denser forest adds scenery geometry; check performance on your target devices and reduce the tree/leaf settings if needed.
