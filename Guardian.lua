@@ -1,6 +1,6 @@
 -- Primeval Jungle for Parkour Duels. Paste into a server Script.
 -- References: the supplied Guardian article and overhead/in-game screenshots.
--- Expanded 800 x 800 stud movement arena. Vertical levels remain movement-sized.
+-- 550 x 550 stud movement arena. Vertical levels remain movement-sized.
 -- Floor coordinates mean TOP surfaces. Keep your existing movement controller.
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -9,7 +9,7 @@ local RunService = game:GetService("RunService")
 
 local CONFIG = {
     Origin = Vector3.new(0, 64, 0),
-    FootprintStuds = 800, -- Playable floor width and depth; forest extends outside.
+    FootprintStuds = 550, -- Playable floor width and depth; forest extends outside.
     RouteWallHeight = 14,
     FloorSurfaceThickness = 0.12,
     SetAtmosphere = true,
@@ -18,17 +18,17 @@ local CONFIG = {
     EnableVoidReset = true, -- Disable if other playable areas exist below this map.
     VoidDepth = 40, -- Kill before the default Studio baseplate can catch falling players.
     ForestDetail = true,
-    ForestBands = 3,
-    ForestTreesPerBand = 64, -- 192 scenic trees, plus the large Green landmark.
-    ForestEdgeGap = 110, -- Keeps trunks AND canopy outside the playable square.
-    ForestBandSpacing = 70,
+    ForestBands = 4,
+    ForestTreesPerBand = 96, -- 384 trees with overlapping foliage at player height.
+    ForestEdgeGap = 72, -- Keeps trunks AND canopy outside the playable square.
+    ForestBandSpacing = 38,
     EnableLeafGround = true,
-    LeafGroundMargin = 380,
+    LeafGroundMargin = 330,
     LeafClusters = 180,
     LeafTexture = "", -- Optional permitted leaf-litter image, otherwise native leaves.
-    LightingClockTime = 16.35,
-    LightingBrightness = 2.25,
-    MistDensity = 0.22,
+    LightingClockTime = 12,
+    LightingBrightness = 1.35,
+    MistDensity = 0.40,
     -- Match your controller's 15% gravity cancellation while airborne.
     -- Use 1 if testing without air float; lift launch calculations use this factor.
     LiftGravityMultiplier = 0.85,
@@ -65,17 +65,92 @@ for name, value in pairs({WalkSpeed=16, SprintStart=21.5, SprintMax=29,
 end
 map.Parent = Workspace
 
+-- BEGIN SHARED LIGHTING PRESET
+local function applyForestLighting()
+    -- Overcast green light and near haze, inspired by the supplied forest image.
+    Lighting.ClockTime=CONFIG.LightingClockTime
+    Lighting.Brightness=CONFIG.LightingBrightness
+    Lighting.ExposureCompensation=-0.10
+    Lighting.Ambient=Color3.fromRGB(62,78,68)
+    Lighting.OutdoorAmbient=Color3.fromRGB(92,110,98)
+    Lighting.EnvironmentDiffuseScale=0.45
+    Lighting.EnvironmentSpecularScale=0.20
+    Lighting.GlobalShadows=true
+    Lighting.ShadowSoftness=1
+    Lighting.FogColor=Color3.fromRGB(55,91,75)
+    Lighting.FogStart=CONFIG.FootprintStuds*0.12
+    Lighting.FogEnd=CONFIG.FootprintStuds*1.15
+    local atmosphere=Lighting:FindFirstChild("GuardianAtmosphere") or Lighting:FindFirstChildOfClass("Atmosphere")
+    if not atmosphere then
+        atmosphere=Instance.new("Atmosphere")
+        atmosphere.Name="GuardianAtmosphere"
+        atmosphere.Parent=Lighting
+    end
+    -- Apply on every run, including when the previous version created it.
+    atmosphere.Density=CONFIG.MistDensity
+    atmosphere.Offset=-0.10
+    atmosphere.Color=Color3.fromRGB(125,158,136)
+    atmosphere.Decay=Color3.fromRGB(42,76,59)
+    atmosphere.Haze=2.8
+    atmosphere.Glare=0
+    local sky=Lighting:FindFirstChildOfClass("Sky")
+    if not sky then
+        sky=Instance.new("Sky")
+        sky.Name="PrimevalJungleSky"
+        sky.Parent=Lighting
+    end
+    sky.CelestialBodiesShown=false
+    sky.StarCount=0
+    local terrain=Workspace:FindFirstChildOfClass("Terrain")
+    if terrain then
+        local clouds=terrain:FindFirstChildOfClass("Clouds")
+        if not clouds then
+            clouds=Instance.new("Clouds")
+            clouds.Name="PrimevalJungleClouds"
+            clouds.Parent=terrain
+        end
+        clouds.Enabled=true
+        clouds.Cover=0.98
+        clouds.Density=0.80
+        clouds.Color=Color3.fromRGB(79,100,87)
+    end
+    local function ownedEffect(name,class)
+        local effect=Lighting:FindFirstChild(name)
+        if effect and not effect:IsA(class) then
+            error("Lighting."..name.." must be a "..class)
+        end
+        if not effect then
+            effect=Instance.new(class)
+            effect.Name=name
+            effect.Parent=Lighting
+        end
+        effect.Enabled=true
+        return effect
+    end
+    local grade=ownedEffect("GuardianColorGrade","ColorCorrectionEffect")
+    grade.Brightness=-0.035
+    grade.Contrast=0.14
+    grade.Saturation=-0.22
+    grade.TintColor=Color3.fromRGB(210,231,215)
+    local bloom=ownedEffect("GuardianBloom","BloomEffect")
+    bloom.Intensity=0.16
+    bloom.Size=20
+    bloom.Threshold=1.2
+end
+-- END SHARED LIGHTING PRESET
+if CONFIG.SetAtmosphere then applyForestLighting() end
+
 local colors = {
-    metal = Color3.fromRGB(86, 102, 104),
-    stone = Color3.fromRGB(78, 91, 90),
-    edge = Color3.fromRGB(43, 57, 58),
-    panel = Color3.fromRGB(110, 126, 124),
-    moss = Color3.fromRGB(73, 94, 47),
+    metal = Color3.fromRGB(73, 88, 79),
+    stone = Color3.fromRGB(68, 81, 69),
+    edge = Color3.fromRGB(36, 50, 42),
+    panel = Color3.fromRGB(98, 112, 101),
+    moss = Color3.fromRGB(44, 68, 38),
     cyan = Color3.fromRGB(92, 226, 240),
     blue = Color3.fromRGB(69, 155, 236),
     gold = Color3.fromRGB(243, 213, 116),
-    bark = Color3.fromRGB(48, 61, 45),
-    leaves = Color3.fromRGB(46, 81, 43),
+    bark = Color3.fromRGB(42, 55, 37),
+    leaves = Color3.fromRGB(32, 65, 42),
     white = Color3.fromRGB(204, 246, 241),
 }
 local folders = {}
@@ -144,7 +219,7 @@ end
 local function wall(name,x,bottom,z,sx,height,sz)
     local p=block(name,x,bottom+height/2,z,sx,height,sz,colors.stone,Enum.Material.Slate,"Walls")
     texture(p,CONFIG.StoneTexture)
-    block(name.."_Cap",x,bottom+height-0.2,z,sx+0.25,0.4,sz+0.25,
+    block(name.."_Cap",x,bottom+height+0.15,z,sx+0.25,0.4,sz+0.25,
         colors.panel,Enum.Material.Metal,"Details",false)
     -- Dark horizontal joints, flush with the surface, on both visible faces.
     for y=bottom+4,bottom+height-1,4 do
@@ -313,7 +388,7 @@ route("SniperTopEntrance",-62,SNIPER_TOP,22,-62,SNIPER_TOP,14,10,false)
 -- Balcony -> S2 is an 8-stud jump/mantle; the winding ramp is the walking route.
 -- Leave the southern landing open for the Bottom Blue man-cannon.
 wall("SniperBack",-95,0,0,2,38,62)
-wall("SniperNorthCover",-68,SNIPER_TOP,-21,26,7,2)
+wall("SniperNorthCover",-68,SNIPER_TOP,-21,26,18,2)
 arch("SniperLowerDoor",-44,0,0,12,math.pi/2,colors.cyan)
 arch("SniperS2Door",-68,SNIPER_TOP,-16,12,0,colors.cyan)
 glow("SniperWallStrip",-93.8,18,0,0.12,22,1,colors.cyan,true)
@@ -346,8 +421,8 @@ callout("Green / Stump",0,0,-57)
 route("ElbowWest",-50,UPPER,-14,-50,UPPER,-38,12,false)
 floor("ElbowCorner",-50,UPPER,-44,12,12)
 route("ElbowGreenRamp",-44,UPPER,-44,-23,0,-44,12,false)
-wall("ElbowOuterWest",-57,UPPER,-30,2,5,38)
-wall("ElbowOuterNorth",-50,UPPER,-51,14,5,2)
+wall("ElbowOuterWest",-57,UPPER,-30,2,18,38)
+wall("ElbowOuterNorth",-50,UPPER,-51,14,18,2)
 pylon("ElbowCornerPylon",-55,UPPER,-47,math.pi/2)
 callout("Elbow",-50,UPPER,-36)
 
@@ -388,7 +463,6 @@ wall("BlueWestBack",-25,0,78,2,36,34)
 wall("BlueEastBack",25,0,82,2,36,26)
 arch("BlueHallDoor",20,UPPER,64,12,math.pi/2,colors.blue)
 arch("BlueCenterDoor",0,UPPER,54,14,0,colors.blue)
-wall("BlueRoofBack",0,32,88,52,2,12)
 glow("BlueBackAmbient",0,UPPER+9,92.8,40,0.45,0.12,colors.blue,true)
 -- A free-standing hologram in a rear alcove, outside the main running line.
 disc("BlueHologramPlinth",0,UPPER+0.6,84,3,0.6,colors.edge)
@@ -423,8 +497,8 @@ callout("Bottom Blue / Shotgun",-15,0,70)
 perforatedFloor("PowerCoreHallEast",UPPER,{20,40,42,50,56},{56,60,68,72},{{42,50,60,68}})
 floor("PowerCoreHallCorner",62,UPPER,64,12,12)
 route("PowerCoreHallNorth",62,UPPER,58,62,UPPER,23,12,false)
-wall("PowerCoreHallSouthWall",39,UPPER,73,38,6,2)
-wall("PowerCoreHallEastWall",69,UPPER,48,2,7,46)
+wall("PowerCoreHallSouthWall",39,UPPER,73,38,16,2)
+wall("PowerCoreHallEastWall",69,UPPER,48,2,16,46)
 -- Narrow bridges beside the drop retain a continuous walking route.
 -- The perforated floor already supplies both lips; extra slabs caused flicker.
 for _,z in ipairs({34,45,56}) do
@@ -662,9 +736,9 @@ roomWall("GoldUpperWestNorth",48,UPPER,-15.5,0.45,16,15)
 roomWall("GoldUpperWestSouth",48,UPPER,15.5,0.45,16,15)
 roomWall("SniperUpperWest",-79.7,SNIPER_TOP,-1,0.45,18,38)
 roomWall("SniperUpperFrontWest",-75,SNIPER_TOP,18,10,14,0.45)
-roomWall("GreenNorthWall",0,0,-73.6,46,14,0.45)
-roomWall("GreenWestWall",-22.6,0,-64,0.45,14,20)
-roomWall("GreenEastWall",22.6,0,-66,0.45,14,16)
+roomWall("GreenNorthWall",0,0,-73.6,46,24,0.45)
+roomWall("GreenWestWall",-22.6,0,-61.5,0.45,24,25)
+roomWall("GreenEastWall",22.6,0,-66,0.45,24,16)
 -- Broad chambers get partial dividing walls with 24+ stud passing space.
 roomWall("BlueRoomScreenWest",-11,UPPER,78,8,12,0.5)
 roomWall("BlueRoomScreenEast",11,UPPER,72,8,12,0.5)
@@ -673,8 +747,123 @@ roomWall("GoldRoomScreenSouth",83,UPPER,14,10,12,0.5)
 roomWall("GreenCoverWest",-12,0,-61,0.5,8,8)
 roomWall("GreenCoverEast",12,0,-53,0.5,8,8)
 
+-- The reference's outer structures are rooms and sheltered galleries. Keep
+-- their doorway gaps and lift landings clear; the central upper disc stays open.
+roomWall("SniperLowerNorth",-70,0,-20.5,24,22,0.6)
+roomWall("SniperLowerEastNorth",-44,0,-14,0.6,15,12)
+roomWall("SniperLowerEastSouth",-44,0,15,0.6,15,12)
+roomWall("SniperS2EastNorth",-55.7,SNIPER_TOP,-11,0.6,18,18)
+roomWall("SniperS2EastSouth",-55.7,SNIPER_TOP,11,0.6,18,14)
+roomWall("SniperBalconyFrontNorth",-42,UPPER,-10.5,0.6,18,7)
+roomWall("SniperBalconyFrontSouth",-42,UPPER,12.5,0.6,18,11)
+roomWall("SniperS2Roof",-68,42,-1,24,2,38)
+roomWall("GoldLowerWestNorth",44,0,-15.5,0.6,15,15)
+roomWall("GoldLowerWestSouth",44,0,15.5,0.6,15,15)
+roomWall("GoldCamoWestFront",50,UPPER,-25.5,0.6,18,3)
+roomWall("GoldCamoWestRear",50,UPPER,-39,0.6,18,2)
+roomWall("GoldCamoEastBoundary",78,UPPER,-32,0.6,18,16)
+roomWall("BlueLowerFrontWest",-15,0,44,18,15,0.6)
+roomWall("BlueLowerFrontEast",15,0,44,18,15,0.6)
+roomWall("BlueUpperEastFront",19.7,UPPER,57,0.6,16,6)
+roomWall("BlueRoomRoof",0,32,75,40,2,42)
+roomWall("GreenEastFront",22.6,0,-45,0.6,24,6)
+roomWall("GreenRearRoof",0,24,-61,46,2,26)
+roomWall("ElbowInnerWall",-43,UPPER,-32,0.6,18,20)
+roomWall("PowerCoreHallNorthWest",30,UPPER,56,20,16,0.6)
+roomWall("PowerCoreHallNorthEast",53,UPPER,56,6,16,0.6)
+roomWall("PowerCoreGalleryInner",55.7,UPPER,40,0.6,16,20)
+roomWall("PowerCoreHallRoof",38,32,64,36,2,18)
+roomWall("PowerCoreGalleryRoof",62,32,45,12,2,40)
+
+-- Asset-free weathering: inset seams, layered stone panels and edge moss.
+-- These sit off wall faces, not over playable floors; none blocks movement.
+local detailRng=Random.new(4271)
+for _,surface in ipairs(folders.Walls:GetChildren()) do
+    if surface:IsA("BasePart") and surface.Material==Enum.Material.Slate
+        and surface.Size.Y>=8 and not string.find(surface.Name,"Roof") then
+        local size=surface.Size
+        local wideX=size.X>size.Z
+        local width=wideX and size.X or size.Z
+        local depth=wideX and size.Z or size.X
+        local frame=surface.CFrame*(wideX and CFrame.new() or CFrame.Angles(0,math.pi/2,0))
+        local count=math.max(1,math.floor(width/14))
+        for _,side in ipairs({-1,1}) do
+            for i=1,count-1 do
+                part("WallPanelSeam",Vector3.new(0.10,size.Y-0.5,0.06),
+                    frame*CFrame.new(-width/2+width*i/count,0,side*(depth/2+0.04)),
+                    colors.edge,Enum.Material.Slate,"Details",false)
+            end
+            for y=-size.Y/2+6,size.Y/2-2,6 do
+                part("WallCourseSeam",Vector3.new(width-0.2,0.10,0.06),
+                    frame*CFrame.new(0,y,side*(depth/2+0.04)),
+                    colors.edge,Enum.Material.Slate,"Details",false)
+            end
+            for i=1,count do
+                local panelWidth=width/count
+                part("WeatheredWallInset",Vector3.new(panelWidth-0.6,0.22,0.09),
+                    frame*CFrame.new(-width/2+(i-0.5)*panelWidth,size.Y/2-1.0,side*(depth/2+0.08)),
+                    colors.panel,Enum.Material.Concrete,"Details",false)
+                if i%2==1 then
+                    local moss=part("WallMoss",Vector3.new(math.min(panelWidth-0.6,6),detailRng:NextNumber(2,5),0.10),
+                        frame*CFrame.new(-width/2+(i-0.5)*panelWidth,size.Y/2-3,side*(depth/2+0.12)),
+                        colors.moss,Enum.Material.LeafyGrass,"Details",false)
+                    moss.Transparency=0.15
+                end
+            end
+        end
+    end
+end
+
+-- Small fixtures give dim rooms pools of light rather than flat bright fill.
+for _,fixture in ipairs({
+    {"BlueFrontLamp",-12,UPPER+12,56},{"BlueRearLamp",12,UPPER+12,89},
+    {"ShotgunLamp",-18,10,71},{"SniperLowerLamp",-82,12,-12},
+    {"SniperS2Lamp",-74,SNIPER_TOP+12,-10},{"GoldLowerLamp",87,12,-18},
+    {"GoldUpperLamp",85,UPPER+12,18},{"GreenRearLamp",-15,18,-69},
+    {"ElbowLamp",-55,UPPER+12,-40},{"HallLamp",32,UPPER+12,71},
+    {"GalleryLamp",67,UPPER+12,42},
+}) do
+    local lamp=part(fixture[1],Vector3.new(7,0.16,0.45),
+        CFrame.new(layoutPoint(fixture[2],fixture[3],fixture[4])),
+        colors.white,Enum.Material.Neon,"Details",false)
+    local light=Instance.new("PointLight")
+    light.Color=Color3.fromRGB(182,218,200)
+    light.Range=42
+    light.Brightness=1.1
+    light.Shadows=true
+    light.Parent=lamp
+end
+
 -- Build disjoint visible floor patches. Overlapping collision slabs are hidden;
 -- their union remains solid, but two top faces can never flicker at the same Y.
+local function floorPatina(surface)
+    local gui=Instance.new("SurfaceGui")
+    gui.Name="WeatheredFloorPattern"
+    gui.Face=Enum.NormalId.Top
+    gui.CanvasSize=Vector2.new(512,512)
+    gui.LightInfluence=1
+    gui.AlwaysOnTop=false
+    gui.Parent=surface
+    -- Thin panel joints and irregular damp stains respect the room lighting.
+    for i,mark in ipairs({{8,8,496,3},{8,8,3,496},{8,501,496,3},{501,8,3,496},
+        {171,8,2,496},{342,8,2,496},{8,255,496,2},
+        {22,24,45,80},{397,324,62,113},{28,459,118,22}}) do
+        local frame=Instance.new("Frame")
+        frame.Name="Patina"..i
+        frame.BorderSizePixel=0
+        frame.BackgroundColor3=i<=7 and colors.edge or colors.moss
+        frame.BackgroundTransparency=i<=7 and 0.55 or 0.78
+        frame.Position=UDim2.fromOffset(mark[1],mark[2])
+        frame.Size=UDim2.fromOffset(mark[3],mark[4])
+        frame.Parent=gui
+    end
+end
+for _,surface in ipairs(folders.Floors:GetChildren()) do
+    if surface.Material==Enum.Material.Metal then surface.Material=Enum.Material.Concrete end
+    if surface.CFrame.UpVector.Y<0.99999 and surface.Shape~=Enum.PartType.Cylinder then
+        floorPatina(surface)
+    end
+end
 local EPS=0.000001
 local function cross2(a,b,c)
     return (b.X-a.X)*(c.Z-a.Z)-(b.Z-a.Z)*(c.X-a.X)
@@ -768,6 +957,7 @@ local function renderPolygon(poly,color,material)
                 color,material,"FloorSurfaces",false)
             for i,v in ipairs(poly) do panel:SetAttribute("Quad"..i,v) end
             texture(panel,material==Enum.Material.Slate and CONFIG.StoneTexture or CONFIG.MetalTexture)
+            floorPatina(panel)
             return
         end
     end
@@ -905,7 +1095,8 @@ if CONFIG.EnableLeafGround then
     end
 end
 
--- Three staggered square belts immerse all four sides without entering the map.
+-- Overlapping crowns form a tree wall at player height as well as overhead.
+-- All scenery stays outside the playable square and never supplies collision.
 local treeRng=Random.new(1703)
 local treeCount=0
 if CONFIG.ForestDetail then
@@ -918,15 +1109,15 @@ if CONFIG.ForestDetail then
             local side=math.floor((index-1)/perSide)
             local slot=(index-1)%perSide
             local along=((slot+0.5+treeRng:NextNumber(-0.18,0.18)+(band-1)*0.15)/perSide*2-1)*radius
-            local edge=radius+treeRng:NextNumber(-8,8)
+            local edge=radius+treeRng:NextNumber(-6,6)
             local x,z
             if side==0 then x,z=along,-edge
             elseif side==1 then x,z=edge,along
             elseif side==2 then x,z=-along,edge
             else x,z=-edge,-along end
             x,z=x+CONFIG.Origin.X,z+CONFIG.Origin.Z
-            local height=treeRng:NextNumber(180,270)+(band-1)*12
-            local width=treeRng:NextNumber(9,16)
+            local height=treeRng:NextNumber(240,320)+(band-1)*10
+            local width=treeRng:NextNumber(16,25)
             local center=Vector3.new(x,groundTop+height/2-6,z)
             local trunk=part("AncientForestTrunk",Vector3.new(height,width,width),
                 CFrame.new(center)*CFrame.Angles(0,0,math.pi/2+treeRng:NextNumber(-0.035,0.035)),
@@ -937,12 +1128,14 @@ if CONFIG.ForestDetail then
             trunk:SetAttribute("ForestBand",band)
             treeCount=treeCount+1
             local top=groundTop+height-6
-            for crown=1,3 do
-                local canopy=part("ForestCanopy",Vector3.new(treeRng:NextNumber(60,88),treeRng:NextNumber(34,55),treeRng:NextNumber(58,86)),
-                    CFrame.new(x+treeRng:NextNumber(-18,18),top-18+(crown-1)*12,z+treeRng:NextNumber(-18,18)),
-                    crown==2 and Color3.fromRGB(49,83,48) or colors.leaves,Enum.Material.Grass,"Forest",false)
+            for crown,layer in ipairs({{84,82},{148,100},{height-50,100},{height-8,80}}) do
+                local canopy=part("ForestCanopy",Vector3.new(treeRng:NextNumber(78,98),layer[2],treeRng:NextNumber(78,98)),
+                    CFrame.new(x+treeRng:NextNumber(-10,10),groundTop+layer[1],z+treeRng:NextNumber(-10,10)),
+                    crown==2 and Color3.fromRGB(37,72,43) or colors.leaves,Enum.Material.LeafyGrass,"Forest",false)
                 canopy.Shape=Enum.PartType.Ball
                 canopy.CastShadow=false
+                canopy:SetAttribute("ForestBand",band)
+                canopy:SetAttribute("CanopyLayer",crown)
             end
             -- A branch and a vine silhouette add depth to the closest belt.
             if band==1 then
@@ -1017,54 +1210,5 @@ if CONFIG.EnableSpawns then
         spawn.Parent=folders.Gameplay
     end
 end
-if CONFIG.SetAtmosphere then
-    -- Late-afternoon light with cool mist; ambient fill keeps enclosed rooms clear.
-    Lighting.ClockTime=CONFIG.LightingClockTime
-    Lighting.Brightness=CONFIG.LightingBrightness
-    Lighting.ExposureCompensation=0.15
-    Lighting.Ambient=Color3.fromRGB(96,113,119)
-    Lighting.OutdoorAmbient=Color3.fromRGB(130,151,141)
-    Lighting.EnvironmentDiffuseScale=0.65
-    Lighting.EnvironmentSpecularScale=0.55
-    Lighting.GlobalShadows=true
-    Lighting.ShadowSoftness=0.45
-    Lighting.FogColor=Color3.fromRGB(99,135,139)
-    Lighting.FogStart=CONFIG.FootprintStuds*0.42
-    Lighting.FogEnd=CONFIG.FootprintStuds*1.7
-    local atmosphere=Lighting:FindFirstChild("GuardianAtmosphere") or Lighting:FindFirstChildOfClass("Atmosphere")
-    if not atmosphere then
-        atmosphere=Instance.new("Atmosphere")
-        atmosphere.Name="GuardianAtmosphere"
-        atmosphere.Parent=Lighting
-    end
-    -- Apply on every run, including when the previous version created it.
-    atmosphere.Density=CONFIG.MistDensity
-    atmosphere.Offset=0.12
-    atmosphere.Color=Color3.fromRGB(145,180,176)
-    atmosphere.Decay=Color3.fromRGB(61,85,99)
-    atmosphere.Haze=1.3
-    atmosphere.Glare=0.10
-    local function ownedEffect(name,class)
-        local effect=Lighting:FindFirstChild(name)
-        if effect and not effect:IsA(class) then
-            error("Lighting."..name.." must be a "..class)
-        end
-        if not effect then
-            effect=Instance.new(class)
-            effect.Name=name
-            effect.Parent=Lighting
-        end
-        effect.Enabled=true
-        return effect
-    end
-    local grade=ownedEffect("GuardianColorGrade","ColorCorrectionEffect")
-    grade.Brightness=0.015
-    grade.Contrast=0.06
-    grade.Saturation=-0.07
-    grade.TintColor=Color3.fromRGB(226,239,238)
-    local bloom=ownedEffect("GuardianBloom","BloomEffect")
-    bloom.Intensity=0.10
-    bloom.Size=20
-    bloom.Threshold=1.4
-end
-print(MAP_NAME.." generated: leafy ground, "..treeCount.." scenic forest trees, readable dusk lighting.")
+
+print(MAP_NAME.." generated: leafy ground, "..treeCount.." scenic forest trees, green overcast fog and sheltered rooms.")
